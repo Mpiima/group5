@@ -1,3 +1,3 @@
 library(shiny)
-currency <- read.csv("all_currencies" )
+currency <- read.csv("all_currencies", stringsAsFactors = FALSE)
 head(currency)
