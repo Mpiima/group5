@@ -95,6 +95,7 @@ shinyUI(
         )#end tab and start of analysis in close price
                     
         ),
+      textOutput(bash),
       tabItem(tabName = "closeprice",
               tabsetPanel(
                 type="tab",
