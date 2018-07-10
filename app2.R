@@ -1,3 +1,5 @@
+
+
 library(shiny)
 library(shinydashboard)
 library(data.table)
@@ -24,19 +26,18 @@ library(plotrix)
 ui <- 
   
   dashboardPage(
-    dashboardHeader(title = strong(h2("CRYPTOCURRENCY ANALYSIS PROJECT")),titleWidth = "500"),
+    dashboardHeader(title = strong(h2("CRYPTOCURRENCY DATA ANALYSIS PROJECT")),titleWidth = 500),
     
     dashboardSidebar(
-      
       #cryptocurrency image
-      tags$img(src='bitcoin.jpg', width="100"),
+      tags$img(src='image2.jpg', width="100"),
       ##########search input##################
       sidebarSearchForm(label = "Enter a number", "searchText", "searchButton"),
       
       #######end of search#####################################
+      
       sidebarMenu(
-        
-        
+        menuItem(strong("Product Description"),tabName = "des"),
         
         ###############uploadfile########
         menuItem("RawData Upload",icon = icon("upload"),
@@ -46,16 +47,15 @@ ui <-
                  
                  helpText(strong("select read.table parameters")),
                  checkboxInput(inputId = 'header', label = 'Header', value = FALSE),
-                 checkboxInput(inputId = "stringAsFactors",label = "StringAsFactors",value = FALSE)
+                 checkboxInput(inputId = "stringAsFactors",label = "stringAsFactors",value = FALSE)
                  
                  
                  
         ),
+        
         ##########end of uploading file AND start of data#################
-        
-        
-        
         menuItem(strong("Data"), tabName = "data", icon = icon("table")),
+        
         ####33end of data and begin closeprice analysis with all graphs######
         menuItem(strong("ANALYSIS OF PRICE"), tabName = "price"),
         selectInput("var","select price type", c("ClosePrice"=7, "OpenPrice"=4, "HighPrice"=5, "LowPrice"=6)),
@@ -76,69 +76,27 @@ ui <-
         ######end of top 10 and begin predict ######
         
         
-        menuItem(strong("PREDICT"),tabName = "predict"),
-        #######end predict and then project description
-        menuItem(strong("Project Description"),tabName = "des")
+        menuItem(strong("PREDICT"),tabName = "predict")
+        #######end predict 
+        
+        
       )),
     
-    ###########begin of the body#############
     dashboardBody(
       
+      
+      
       tabItems(
+        
         #defining data output system
-        tabItem(tabName = "data",
-                ###start############
-                tabsetPanel(id="tabs",
-                            tabPanel("uploaded_data",icon = icon("table"), 
-                                     uiOutput("tb")))
-                
-                #end tab and start of analysis in close price
-                
-        ),
-        #tab content
-        tabItem(tabName = "price",
+        #  tab content
+        tabItem(tabName = "des",
                 tabsetPanel(
-                  tabPanel("Analysed in var price",icon = icon("table"),
-                           width=12,tags$b("var price analysis"),
-                           p("The table shows the analysed var prices of all of cryptocurrencies")
-                           
-                  ),
-                  ######tab for the barcharts
-                  tabPanel("BarPlot",icon = icon("bar-chart-o"),
-                           plotOutput("var price", width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("LineGraph",icon = icon("line-chart"),
-                           plotOutput("var price", width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("ScatterPlot",icon = icon("line-chart"),
-                           plotOutput("var price", width = 100,height = 100)
-                  )
-                  ####end
-                  
-                )
+                  tabPanel("Detailed Analysis of Cryptocurrencies"))
                 
                 
         ),
-        tabItem(tabName = "corr",
-                
-                tabsetPanel( 
-                  tabPanel("btn all cryptocurrencies",icon = icon("bar-chart-o"),
-                           plotOutput("var price",width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("+bitcoins",icon = icon("table"),
-                           plotOutput("var price",width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("-bitcoins",icon = icon("table"),
-                           plotOutput("var price",width = 100,height = 100)
-                  )
-                  ####end
-                )
-                
-        ),
+        
         #  tab content
         tabItem(tabName = "market",
                 
@@ -146,6 +104,9 @@ ui <-
                   tabPanel("average market cap", icon = icon("bar-chart-o"))
                 )
         ),
+        
+        
+        
         #  tab content
         tabItem(tabName = "predict",
                 fluidRow(
@@ -157,30 +118,38 @@ ui <-
         #  tab content
         tabItem(tabName = "top",
                 
-                tabsetPanel( 
-                  tabPanel("Mean",icon = icon("table"),
-                           plotOutput("var price",width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("Variance",icon = icon("table"),
-                           plotOutput("var price",width = 100,height = 100)
-                  ),
-                  
-                  tabPanel("Log-return",icon = icon("table"),
-                           plotOutput("var price",width = 100,height = 100)
-                  )
-                  ####end
-                )
+                uiOutput("tops")
                 
+        ),
+        
+        #  tab content
+        tabItem(tabName = "corr",
+                
+                uiOutput("corrs")
+                
+        ),
+        
+        #  tab content
+        tabItem(tabName = "price",
+                
+                uiOutput("prices")
+                
+        ),
+        
+        #  tab content
+        tabItem(tabName = "data",
+                ###start############
+                tabsetPanel(id="tabs",
+                            tabPanel("uploaded_data",icon = icon("table"), 
+                                     uiOutput("tb")
+                            ))
                 
         )
-        ############tab for the charts here in the close prices#############
         
-        ############end of the chartsin closeprice and##################
+        
+        
       )
-      ############end of the body#################
     ))
-
 
 options(shiny.maxRequestSize=50*1024^2)
 server <- function(input,output,session){
@@ -208,7 +177,7 @@ server <- function(input,output,session){
   })
   
   #this output dynamically generates tabsets when file is loaded
-  output$tb <- renderTable({
+  output$tb <- renderUI({
     if(is.null(data()))
       h5("Sorry Excuse Us")
     else
@@ -218,12 +187,65 @@ server <- function(input,output,session){
     
   })
   
-  ##############end of output and start of analysis in close price barplot####################################################
-  
-  output$closeprice <- renderPlot({
-    barplot(data$Close,data$Date, ylab = "close price", xlab = "date")
+  output$tops <- renderUI({
+    tabsetPanel( 
+      tabPanel("Mean",icon = icon("table"),
+               plotOutput("var price",width = 100,height = 100)
+      ),
+      
+      tabPanel("Variance",icon = icon("table"),
+               plotOutput("var price",width = 100,height = 100)
+      ),
+      
+      tabPanel("Log-return",icon = icon("table"),
+               plotOutput("var price",width = 100,height = 100)
+      )
+      ####end
+    )
+    
   })
-  ###############end in closeprice analysis and start in correlation analsis#############
+  
+  output$corrs <- renderUI({
+    tabsetPanel( 
+      tabPanel("btn all cryptocurrencies",icon = icon("bar-chart-o"),
+               plotOutput("var price",width = 100,height = 100)
+      ),
+      
+      tabPanel("+bitcoins",icon = icon("table"),
+               plotOutput("var price",width = 100,height = 100)
+      ),
+      
+      tabPanel("-bitcoins",icon = icon("table"),
+               plotOutput("var price",width = 100,height = 100)
+      )
+      ####end
+    )
+  })
+  
+  output$prices <- renderUI({
+    tabsetPanel(
+      tabPanel("Analysed in var price",icon = icon("table"),
+               width=12,tags$b("var price analysis"),
+               p("The table shows the analysed var prices of all of cryptocurrencies")
+               
+      ),
+      ######tab for the barcharts
+      tabPanel("BarPlot",icon = icon("bar-chart-o"),
+               plotOutput("var price", width = 100,height = 100)
+      ),
+      
+      tabPanel("LineGraph",icon = icon("line-chart"),
+               plotOutput("var price", width = 100,height = 100)
+      ),
+      
+      tabPanel("ScatterPlot",icon = icon("line-chart"),
+               plotOutput("var price", width = 100,height = 100)
+      )
+      ####end
+      
+    )
+    
+  })
 }
 
 # Run the application 
