@@ -21,7 +21,7 @@ library(forecast)
 library(plotrix)
 
 #desiging a user interface
-shinyUI <- 
+ui <- 
   
   dashboardPage(
     dashboardHeader(title = strong(h2("CRYPTOCURRENCY ANALYSIS PROJECT")),titleWidth = "500"),
@@ -29,7 +29,7 @@ shinyUI <-
     dashboardSidebar(
       
       #cryptocurrency image
-      tags$img(src='image2.jpg', width="100"),
+      tags$img(src='bitcoin.jpg', width="100"),
       ##########search input##################
       sidebarSearchForm(label = "Enter a number", "searchText", "searchButton"),
       
@@ -39,15 +39,23 @@ shinyUI <-
         
         
         ###############uploadfile########
-        menuItem("RawData Upload",tabName = "upload", icon = icon("upload"),
-                 menuSubItem(icon = icon("upload"),
-                             fileInput(inputId ="file","choose File",
-                                       accept =c('text/csv','text/comma-separated-values,text/plain','.csv')) )),
+        menuItem("RawData Upload",icon = icon("upload"),
+                 
+                 fileInput(inputId ="file","choose File",
+                           accept =c('text/csv','text/comma-separated-values,text/plain','.csv')), 
+                 
+                 helpText(strong("select read.table parameters")),
+                 checkboxInput(inputId = 'header', label = 'Header', value = FALSE),
+                 checkboxInput(inputId = "stringAsFactors",label = "StringAsFactors",value = FALSE)
+                 
+                 
+                 
+        ),
         ##########end of uploading file AND start of data#################
         
         
         
-        menuItem("Data", tabName = "data", icon = icon("table")),
+        menuItem(strong("Data"), tabName = "data", icon = icon("table")),
         ####33end of data and begin closeprice analysis with all graphs######
         menuItem(strong("ANALYSIS OF PRICE"), tabName = "price"),
         selectInput("var","select price type", c("ClosePrice"=7, "OpenPrice"=4, "HighPrice"=5, "LowPrice"=6)),
@@ -81,7 +89,8 @@ shinyUI <-
         tabItem(tabName = "data",
                 ###start############
                 tabsetPanel(id="tabs",
-                            tabPanel("uploaded_data",icon = icon("table"), dataTableOutput("mytable1"),dataTableOutput("mytable2")))
+                            tabPanel("uploaded_data",icon = icon("table"), 
+                                     uiOutput("tb")))
                 
                 #end tab and start of analysis in close price
                 
@@ -175,48 +184,47 @@ shinyUI <-
 
 options(shiny.maxRequestSize=50*1024^2)
 server <- function(input,output,session){
-  #implementing file input##############
-  myData <- reactive({
-    file1<-input$file
-    if(is.null(file))return(NULL)
-    
-    data<-read.csv(file1$datapath, header = TRUE)
-    data
+  #reactive function takes inputs from ui.r and uses read.table to read data
+  
+  data <- reactive({
+    file1 <- input$file
+    if(is.null(file1)){return()}
+    read.table(file=file$datapath, header= input$header, stringsAsFactors = input$stringAsFactors)
   })
-  ###########end and start of output uploaded data#######
-  output$contents <- renderTable(
-    myData()
-  )
-  ####eerror ########
-  read<-function(){
-    if(is.null(input$file))
-      return(NULL)
-    library(ggplot2)
+  #this output contains summary of dataset in table format
+  output$filedf <- renderTable({
+    if(is.null(data())){return()}
+    input$file
+  })
+  #this output contains summary of dataset in table format
+  output$sum <- renderTable({
+    if(is.null(data())){return()}
+    summary(data())
+  })
+  #this output contains the dataset in table format
+  output$table <- renderTable({
+    if(is.null(data())){return()}
+    data()
+  })
+  
+  #this output dynamically generates tabsets when file is loaded
+  output$tb <- renderTable({
+    if(is.null(data()))
+      h5("Sorry Excuse Us")
+    else
+      tabsetPanel(tabPanel("About file",tableOutput("filedf")),
+                  tabPanel("Data", tableOutput("table")),
+                  tabPanel("Summary", tableOutput("sum")))
     
-    infile<-input$file
-    data<-read.csv(infile$datapath)
-    
-    #######variables for the data titles in the  set#########
-    df<-data.frame(
-      Date=data$Date,
-      Symbol=data$Symbol,
-      Open=data$Open,
-      Close=data$Close,
-      Volume=data$Volume,
-      MarketCap=data$MarketCap
-      
-    )
-    df ####reading the output#############################
-  }
-  # reading the two tables in the data frame###############
-  output$mytable1<-renderDataTable({read()[,1:6]})
+  })
   
   ##############end of output and start of analysis in close price barplot####################################################
   
   output$closeprice <- renderPlot({
-    d <- barplot(data$Close,data$Date, ylab = "close price", xlab = "date")
+    barplot(data$Close,data$Date, ylab = "close price", xlab = "date")
   })
   ###############end in closeprice analysis and start in correlation analsis#############
 }
 
-shinyApp(ui = shinyUI , server = server)
+# Run the application 
+shinyApp(ui = ui, server = server)
