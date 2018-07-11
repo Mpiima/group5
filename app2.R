@@ -43,11 +43,11 @@ ui <-
         menuItem("RawData Upload",icon = icon("upload"),
                  
                  fileInput(inputId ="file","choose File",
-                           accept =c('text/csv','text/comma-separated-values,text/plain','.csv')), 
+                           accept =c('text/csv','text/comma-separated-values,text/plain','.csv')) 
                  
-                 helpText(strong("select read.table parameters")),
-                 checkboxInput(inputId = 'header', label = 'Header', value = FALSE),
-                 checkboxInput(inputId = "stringAsFactors",label = "stringAsFactors",value = FALSE)
+                 #helpText(strong("select read.table parameters")),
+                 #checkboxInput(inputId = 'header', label = 'Header', value = FALSE),
+                 #checkboxInput(inputId = "stringAsFactors",label = "stringAsFactors",value = FALSE)
                  
                  
                  
@@ -58,7 +58,7 @@ ui <-
         
         ####33end of data and begin closeprice analysis with all graphs######
         menuItem(strong("ANALYSIS OF PRICE"), tabName = "price"),
-        selectInput("var","select price type", c("ClosePrice"=7, "OpenPrice"=4, "HighPrice"=5, "LowPrice"=6)),
+        
         
         
         #######end of analysis in closeprice and start correlation analysis################
@@ -158,22 +158,34 @@ server <- function(input,output,session){
   data <- reactive({
     file1 <- input$file
     if(is.null(file1)){return()}
-    read.table(file=file$datapath, header= input$header, stringsAsFactors = input$stringAsFactors)
+    data1<-read.csv(file1$datapath, header = TRUE)
+    data1
+    # read.table(file=file$datapath, header= input$header, stringsAsFactors = input$stringAsFactors)
   })
   #this output contains summary of dataset in table format
   output$filedf <- renderTable({
     if(is.null(data())){return()}
     input$file
   })
+  
+  #this output contains structure of dataset in table format
+  output$str <- renderPrint({
+    if(is.null(data())){return()}
+    str(data())
+    
+  })
+  
   #this output contains summary of dataset in table format
-  output$sum <- renderTable({
+  output$sum <- renderPrint({
     if(is.null(data())){return()}
     summary(data())
+    
   })
   #this output contains the dataset in table format
   output$table <- renderTable({
     if(is.null(data())){return()}
-    data()
+    
+    head(data())
   })
   
   #this output dynamically generates tabsets when file is loaded
@@ -183,7 +195,8 @@ server <- function(input,output,session){
     else
       tabsetPanel(tabPanel("About file",tableOutput("filedf")),
                   tabPanel("Data", tableOutput("table")),
-                  tabPanel("Summary", tableOutput("sum")))
+                  tabPanel("Summary", verbatimTextOutput("sum")),
+                  tabPanel("Structure", verbatimTextOutput("str")))
     
   })
   
@@ -224,14 +237,32 @@ server <- function(input,output,session){
   
   output$prices <- renderUI({
     tabsetPanel(
+      
       tabPanel("Analysed in var price",icon = icon("table"),
                width=12,tags$b("var price analysis"),
                p("The table shows the analysed var prices of all of cryptocurrencies")
                
       ),
+      tabPanel("selections",icon = icon("bar-chart-o"),
+               sliderInput("size", "Point size:",
+                           min=0, max=4, value=2, step = 0.2, animate = T ),
+               
+               selectInput(inputId = "var","select price type", c("ClosePrice"=6, "OpenPrice"=3, "HighPrice"=4, "LowPrice"=5),
+                           selected = "ClosePrice", multiple = FALSE),
+               radioButtons("sex","sex",c("male"="blue","female"="red","both"="black"),selected = "male")
+      ),
+      
       ######tab for the barcharts
       tabPanel("BarPlot",icon = icon("bar-chart-o"),
-               plotOutput("var price", width = 100,height = 100)
+               plotOutput(# generate bins based on input$bins from ui.R
+                 coln <- as.numeric(input$var),
+                 data()[coln],
+                 x    <- data()[, coln], 
+                 size <- seq(min(x), max(data()[,coln]), length.out = input$size + 1),
+                 
+                 
+                 # draw the histogram with the specified number of bins
+                 hist(x, breaks = size, col = input$sex, border = 'white'))
       ),
       
       tabPanel("LineGraph",icon = icon("line-chart"),
@@ -246,6 +277,8 @@ server <- function(input,output,session){
     )
     
   })
+  
+  
 }
 
 # Run the application 
