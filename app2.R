@@ -1,5 +1,6 @@
 
 
+
 library(shiny)
 library(shinydashboard)
 library(data.table)
@@ -31,10 +32,7 @@ ui <-
     dashboardSidebar(
       #cryptocurrency image
       tags$img(src='image2.jpg', width="100"),
-      ##########search input##################
-      sidebarSearchForm(label = "Enter a number", "searchText", "searchButton"),
       
-      #######end of search#####################################
       
       sidebarMenu(
         menuItem(strong("Product Description"),tabName = "des"),
@@ -132,23 +130,32 @@ ui <-
         #  tab content
         tabItem(tabName = "price",
                 
-                uiOutput("prices")
+                uiOutput("prices"),
+                uiOutput("prices1"),
+                uiOutput("prices2")
                 
         ),
         
         #  tab content
         tabItem(tabName = "data",
-                ###start############
-                tabsetPanel(id="tabs",
-                            tabPanel("uploaded_data",icon = icon("table"), 
-                                     uiOutput("tb")
-                            ))
                 
-        )
-        
-        
+                fluidPage(
+                  tabBox(width = 200, height = 800,
+                         tabPanel(strong("About file"),
+                                  box(background ="teal",width = 100, height = 400,tableOutput("filedf"))),
+                         tabPanel(strong("Data"),
+                                  box(background ="teal",width = 100, height = 400, tableOutput("table"))),
+                         tabPanel(strong("Summary"),
+                                  box(background ="teal",width = 100, height = 500, verbatimTextOutput("sum"))),
+                         tabPanel(strong("Structure"),
+                                  box(background ="teal",width = 100, height = 400, verbatimTextOutput("str"))))                     
+                ))
         
       )
+      
+      
+      
+      
     ))
 
 options(shiny.maxRequestSize=50*1024^2)
@@ -188,17 +195,7 @@ server <- function(input,output,session){
     head(data())
   })
   
-  #this output dynamically generates tabsets when file is loaded
-  output$tb <- renderUI({
-    if(is.null(data()))
-      h5("Sorry Excuse Us")
-    else
-      tabsetPanel(tabPanel("About file",tableOutput("filedf")),
-                  tabPanel("Data", tableOutput("table")),
-                  tabPanel("Summary", verbatimTextOutput("sum")),
-                  tabPanel("Structure", verbatimTextOutput("str")))
-    
-  })
+  
   
   output$tops <- renderUI({
     tabsetPanel( 
@@ -235,46 +232,70 @@ server <- function(input,output,session){
     )
   })
   
+  output$myhist <- renderPlot({     
+    first <- input$var
+    if(is.null(data()))
+      h5("Sorry Excuse Us")
+    else 
+    {
+      if(first==4){
+        data() %>% select(Date,Open) %>% group_by(Date) %>%ggplot(
+          aes(Date,Open,fill=Open ))+geom_col()+ggtitle("The Change in Open Price")+
+          labs(x ='Date', y ='OpenPrice')
+      } 
+      else if(first==5){
+        dat1 %>% select(Date,High) %>% group_by(Date) %>%ggplot(
+          aes(Date,High,fill=High))+geom_col()+ggtitle("The Change in High Price")+
+          labs(x ='Date', y ='HighPrice')
+        
+      } 
+      else if(first==6){
+        dat1 %>% select(Date, Low) %>% group_by(Date) %>%ggplot(
+          aes(Date,Low, fill=Low ))+geom_col()+ggtitle("The Change in Low Price")+
+          labs(x ='Date', y ='LowPrice')
+      }
+      else if(first==7){
+        dat1 %>% select(Date,Close) %>% group_by(Date) %>%ggplot(
+          aes(Date,Close,fill= Close))+ggtitle("The Change in Close Price")+
+          labs(x ='Date', y ='ClosePrice')
+      }}})
+  
   output$prices <- renderUI({
-    tabsetPanel(
-      
-      tabPanel("Analysed in var price",icon = icon("table"),
-               width=12,tags$b("var price analysis"),
-               p("The table shows the analysed var prices of all of cryptocurrencies")
-               
-      ),
-      tabPanel("selections",icon = icon("bar-chart-o"),
-               sliderInput("size", "Point size:",
-                           min=0, max=4, value=2, step = 0.2, animate = T ),
-               
-               selectInput(inputId = "var","select price type", c("ClosePrice"=6, "OpenPrice"=3, "HighPrice"=4, "LowPrice"=5),
-                           selected = "ClosePrice", multiple = FALSE),
-               radioButtons("sex","sex",c("male"="blue","female"="red","both"="black"),selected = "male")
-      ),
-      
-      ######tab for the barcharts
-      tabPanel("BarPlot",icon = icon("bar-chart-o"),
-               plotOutput(# generate bins based on input$bins from ui.R
-                 coln <- as.numeric(input$var),
-                 data()[coln],
-                 x    <- data()[, coln], 
-                 size <- seq(min(x), max(data()[,coln]), length.out = input$size + 1),
-                 
-                 
-                 # draw the histogram with the specified number of bins
-                 hist(x, breaks = size, col = input$sex, border = 'white'))
-      ),
-      
-      tabPanel("LineGraph",icon = icon("line-chart"),
-               plotOutput("var price", width = 100,height = 100)
-      ),
-      
-      tabPanel("ScatterPlot",icon = icon("line-chart"),
-               plotOutput("var price", width = 100,height = 100)
+    fluidRow(
+      box( side="center",background="red",
+           sliderInput("size", "Point size:", min=0, max=4, value=2, step = 0.2, animate = T ),
+           
+           selectInput(inputId = "bar","select price type", c("OpenPrice"=4,"HighPrice"=5,"LowPrice"=6,"ClosePrice"=7), multiple = FALSE)
       )
-      ####end
+    )})
+  
+  output$prices1 <- renderUI({
+    fluidRow(
       
+      
+      tabBox( width = 500, height = 500, 
+              tabPanel("Analysed in var price",icon = icon("table"),
+                       box(background ="teal",width = 400, height = 400, 
+                           p("The table shows the analysed var prices of all of cryptocurrencies"))),
+              
+              tabPanel("BarGraph",icon = icon("bar-chart-o"), 
+                       box(background ="teal",width = 400, height = 400, plotOutput("myhist"))),
+              tabPanel("LineGraph",icon = icon("bar-chart-o"), 
+                       box(background ="teal",width = 400, height = 400, plotOutput("myhist"))),
+              tabPanel("Scatter",icon = icon("bar-chart-o"), 
+                       box(background ="teal",width = 400, height = 400, plotOutput("myhist")))
+              
+      )
+      
+    )})
+  
+  output$prices2 <- renderUI({
+    fluidRow(
+      box(downloadButton(outputId="downloadData", label = "Download the plot"),background = "olive",width = 3)
     )
+    ####end
+    
+    
     
   })
   
